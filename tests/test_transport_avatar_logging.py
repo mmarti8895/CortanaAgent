@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import socket
 
 import pytest
@@ -39,3 +40,6 @@ def test_logging_configures() -> None:
     configure_logging(debug=True)
     logger = get_logger("unit")
     logger.info("ok")
+    assert logging.getLogger("httpx").level == logging.WARNING
+    assert logging.getLogger("httpcore").level == logging.WARNING
+    assert logging.getLogger("openai").level == logging.WARNING
