@@ -6,10 +6,19 @@ from typing import Any
 
 import structlog
 
+_NOISY_DEPENDENCY_LOGGERS = (
+    "httpx",
+    "httpcore",
+    "openai",
+)
+
 
 def configure_logging(debug: bool = False) -> None:
     level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=level)
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=level, force=True)
+
+    for logger_name in _NOISY_DEPENDENCY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
