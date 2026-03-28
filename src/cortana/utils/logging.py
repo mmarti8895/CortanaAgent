@@ -4,7 +4,7 @@ import logging
 import sys
 from typing import Any
 
-import structlog
+import structlog  # type: ignore[import-untyped]
 
 _NOISY_DEPENDENCY_LOGGERS = (
     "httpx",
