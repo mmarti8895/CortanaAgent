@@ -57,6 +57,43 @@ async def test_orchestrator_requires_wake_word() -> None:
 
 
 @pytest.mark.asyncio
+async def test_orchestrator_combines_follow_up_phrases() -> None:
+    stt = FakeStt(["cortana", "what's the weather", "tomorrow in Boston"])
+    tts = FakeTts()
+    orchestrator = Orchestrator(
+        stt=stt,
+        tts=tts,
+        llm=FakeLlm(),
+        wakeword=WakeWordDetector("cortana"),
+        plugins=PluginManager(),
+        memory=ConversationMemory(max_turns=6),
+    )
+
+    await orchestrator.run()
+
+    assert tts.spoken[0] == "Yes?"
+    assert tts.spoken[1] == "Echo: what's the weather tomorrow in Boston"
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_handles_inline_wake_request() -> None:
+    stt = FakeStt(["cortana what time is it"])
+    tts = FakeTts()
+    orchestrator = Orchestrator(
+        stt=stt,
+        tts=tts,
+        llm=FakeLlm(),
+        wakeword=WakeWordDetector("cortana"),
+        plugins=PluginManager(),
+        memory=ConversationMemory(max_turns=6),
+    )
+
+    await orchestrator.run()
+
+    assert tts.spoken == ["Echo: what time is it"]
+
+
+@pytest.mark.asyncio
 async def test_orchestrator_plugin_short_circuit() -> None:
     class StaticPlugin:
         name = "static"

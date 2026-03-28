@@ -30,6 +30,8 @@ def build_orchestrator() -> Orchestrator:
             compute_type=settings.stt_compute_type,
             sample_rate=settings.stt_sample_rate,
             chunk_seconds=settings.stt_chunk_seconds,
+            end_silence_seconds=settings.stt_end_silence_seconds,
+            max_phrase_seconds=settings.stt_max_phrase_seconds,
         )
     except RuntimeError:
         logger.warning("stt.fallback", backend="text-input")
@@ -60,8 +62,8 @@ def build_orchestrator() -> Orchestrator:
                 config_path=str(settings.piper_config_path) if settings.piper_config_path else None,
                 avatar=avatar,
             )
-        except TextToSpeechError:
-            logger.warning("tts.fallback", backend="console")
+        except TextToSpeechError as exc:
+            logger.warning("tts.fallback", backend="console", reason=str(exc))
             tts = ConsoleTTS(avatar=avatar)
     else:
         tts = ConsoleTTS(avatar=avatar)
@@ -77,6 +79,8 @@ def build_orchestrator() -> Orchestrator:
         wakeword=WakeWordDetector(settings.wake_word, settings.wake_threshold),
         plugins=plugins,
         memory=ConversationMemory(max_turns=settings.memory_max_turns),
+        listen_timeout_seconds=settings.listen_timeout_seconds,
+        listen_max_phrases=settings.listen_max_phrases,
     )
 
 

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import audioop
+import shutil
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
 
 from cortana.avatar.events import AvatarEmitter
 
@@ -17,6 +20,18 @@ class TextToSpeechError(RuntimeError):
     pass
 
 
+def _pcm16_rms(chunk: bytes) -> float:
+    frame_bytes = len(chunk) - (len(chunk) % 2)
+    if frame_bytes == 0:
+        return 0.0
+
+    samples = np.frombuffer(chunk[:frame_bytes], dtype=np.int16).astype(np.float32)
+    if samples.size == 0:
+        return 0.0
+
+    return min(float(np.sqrt(np.mean(np.square(samples))) / 32768.0), 1.0)
+
+
 @dataclass(slots=True)
 class PiperTTS:
     executable: str
@@ -24,20 +39,48 @@ class PiperTTS:
     config_path: str | None
     avatar: AvatarEmitter
 
-    async def speak_stream(self, text_stream: AsyncIterator[str]) -> str:
+    def __post_init__(self) -> None:
         if sd is None:
             raise TextToSpeechError("sounddevice is required for PiperTTS")
 
+        model = Path(self.model_path)
+        if not model.is_file():
+            msg = f"Piper model not found: {model}"
+            raise TextToSpeechError(msg)
+
+        if self.config_path is not None:
+            config = Path(self.config_path)
+            if not config.is_file():
+                msg = f"Piper config not found: {config}"
+                raise TextToSpeechError(msg)
+
+        executable_path = Path(self.executable)
+        if executable_path.is_absolute():
+            if not executable_path.is_file():
+                msg = f"Piper executable not found: {executable_path}"
+                raise TextToSpeechError(msg)
+        else:
+            resolved = shutil.which(self.executable)
+            if resolved is None:
+                msg = f"Piper executable is not on PATH: {self.executable}"
+                raise TextToSpeechError(msg)
+            self.executable = resolved
+
+    async def speak_stream(self, text_stream: AsyncIterator[str]) -> str:
         proc_args = [self.executable, "--model", self.model_path, "--output-raw"]
         if self.config_path:
             proc_args.extend(["--config", self.config_path])
 
-        proc = await asyncio.create_subprocess_exec(
-            *proc_args,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *proc_args,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except OSError:
+            console = ConsoleTTS(avatar=self.avatar)
+            return await console.speak_stream(text_stream)
 
         await self.avatar.speaking_state(True)
         assembled = []
@@ -58,7 +101,7 @@ class PiperTTS:
                     chunk = await proc.stdout.read(2048)
                     if not chunk:
                         break
-                    rms = audioop.rms(chunk, 2) / 32768.0
+                    rms = _pcm16_rms(chunk)
                     await self.avatar.jaw_movement(rms)
                     stream.write(chunk)
         finally:

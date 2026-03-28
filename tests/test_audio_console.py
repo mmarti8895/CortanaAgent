@@ -4,8 +4,9 @@ from collections.abc import AsyncIterator
 
 import pytest
 
+from cortana.audio import tts as tts_module
 from cortana.audio.stt import TextInputSTT
-from cortana.audio.tts import ConsoleTTS
+from cortana.audio.tts import ConsoleTTS, PiperTTS, TextToSpeechError
 
 
 class DummyAvatar:
@@ -42,3 +43,19 @@ async def test_text_input_stt(monkeypatch) -> None:
     stream = stt.stream()
     first = await anext(stream)
     assert first == "Cortana status"
+
+
+def test_piper_tts_requires_executable_and_model(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(tts_module, "sd", object())
+    monkeypatch.setattr(tts_module.shutil, "which", lambda name: None)
+
+    model = tmp_path / "voice.onnx"
+    model.write_bytes(b"model")
+
+    with pytest.raises(TextToSpeechError, match="not on PATH"):
+        PiperTTS(
+            executable="piper",
+            model_path=str(model),
+            config_path=None,
+            avatar=DummyAvatar(),  # type: ignore[arg-type]
+        )

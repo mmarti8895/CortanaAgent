@@ -69,6 +69,8 @@ When microphone dependencies are unavailable, the app automatically switches to 
 
 - `config/local.env` for local-only mode.
 - `config/api.env` for OpenAI + Piper mode.
+- Tune `LISTEN_TIMEOUT_SECONDS` / `LISTEN_MAX_PHRASES` if Cortana cuts off longer spoken requests.
+- Tune `STT_END_SILENCE_SECONDS` / `STT_MAX_PHRASE_SECONDS` if Whisper starts transcribing before you've finished speaking.
 
 Example:
 
