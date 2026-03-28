@@ -49,6 +49,8 @@ Core modules:
 ./scripts/setup_windows.ps1
 ```
 
+The setup script works from either the repo root or the `scripts` folder, and it will try `py`, `python`, `python3.x`, then `uv`.
+
 ## Running
 
 1. Copy and edit environment:
