@@ -17,8 +17,8 @@ from cortana.utils.logging import configure_logging, get_logger
 
 
 def build_orchestrator() -> Orchestrator:
-    logger = get_logger("cortana.bootstrap")
     configure_logging(settings.debug)
+    logger = get_logger("cortana.bootstrap")
 
     publisher = UdpJsonPublisher(settings.udp_host, settings.udp_port)
     avatar = AvatarEmitter(publisher=publisher)
