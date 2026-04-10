@@ -37,11 +37,17 @@ def build_orchestrator() -> Orchestrator:
 
     honorifics = HonorificRotator()
     fallback = LocalFallbackEngine(honorifics=honorifics)
-    if settings.openai_api_key is None:
+    openai_api_key = None
+    if settings.openai_api_key is not None:
+        candidate_api_key = settings.openai_api_key.get_secret_value().strip()
+        if candidate_api_key:
+            openai_api_key = candidate_api_key
+
+    if openai_api_key is None:
         llm = fallback
     else:
         llm = OpenAiLlmEngine(
-            api_key=settings.openai_api_key.get_secret_value(),
+            api_key=openai_api_key,
             model=settings.openai_model,
             temperature=settings.llm_temperature,
             timeout_seconds=settings.llm_timeout_seconds,
