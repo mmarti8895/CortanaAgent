@@ -44,15 +44,18 @@ class PiperTTS:
         try:
             async for part in text_stream:
                 assembled.append(part)
-                assert proc.stdin is not None
+                if proc.stdin is None:
+                    raise TextToSpeechError("Piper subprocess stdin is not available")
                 proc.stdin.write(part.encode("utf-8"))
                 await proc.stdin.drain()
-            assert proc.stdin is not None
+            if proc.stdin is None:
+                raise TextToSpeechError("Piper subprocess stdin is not available")
             proc.stdin.write(b"\n")
             await proc.stdin.drain()
             proc.stdin.close()
 
-            assert proc.stdout is not None
+            if proc.stdout is None:
+                raise TextToSpeechError("Piper subprocess stdout is not available")
             with sd.RawOutputStream(samplerate=22050, channels=1, dtype="int16") as stream:
                 while True:
                     chunk = await proc.stdout.read(2048)
