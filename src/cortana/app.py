@@ -53,16 +53,23 @@ def build_orchestrator() -> Orchestrator:
         settings.tts_backend == "piper"
         and settings.piper_model_path is not None
     ):
+        # Validate required TTS dependencies (e.g., sounddevice) before constructing PiperTTS.
         try:
-            tts = PiperTTS(
-                executable=settings.piper_executable,
-                model_path=str(settings.piper_model_path),
-                config_path=str(settings.piper_config_path) if settings.piper_config_path else None,
-                avatar=avatar,
-            )
-        except TextToSpeechError:
-            logger.warning("tts.fallback", backend="console")
+            import sounddevice  # type: ignore[unused-import]
+        except ImportError:
+            logger.warning("tts.fallback", backend="console", reason="sounddevice missing")
             tts = ConsoleTTS(avatar=avatar)
+        else:
+            try:
+                tts = PiperTTS(
+                    executable=settings.piper_executable,
+                    model_path=str(settings.piper_model_path),
+                    config_path=str(settings.piper_config_path) if settings.piper_config_path else None,
+                    avatar=avatar,
+                )
+            except TextToSpeechError:
+                logger.warning("tts.fallback", backend="console")
+                tts = ConsoleTTS(avatar=avatar)
     else:
         tts = ConsoleTTS(avatar=avatar)
 
