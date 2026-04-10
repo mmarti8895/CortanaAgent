@@ -64,8 +64,12 @@ class Orchestrator:
         self.state = AssistantState.IDLE
 
     async def _speak_once(self, text_stream: AsyncIterator[str]) -> None:
+        previous_state = self.state
         self.state = AssistantState.SPEAKING
-        await self.tts.speak_stream(text_stream)
+        try:
+            await self.tts.speak_stream(text_stream)
+        finally:
+            self.state = previous_state
 
 
 async def _single_item(text: str) -> AsyncIterator[str]:
